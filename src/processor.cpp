@@ -1,6 +1,5 @@
 #include "processor.h"
 
-// TODO: Return the aggregate CPU utilization
 float Processor::Utilization() {
   // Following
   // https://stackoverflow.com/questions/23367857/accurate-calculation-of-cpu-usage-given-in-percentage-in-linux
@@ -29,20 +28,6 @@ float Processor::Utilization() {
   float idled = idleTime - prevIdle;
 
   float cpu = (totald - idled) / (totald + 1.0);
-  // PrevIdle = previdle + previowait
-  // Idle = idle + iowait
-
-  // PrevNonIdle = prevuser + prevnice + prevsystem + previrq + prevsoftirq +
-  // prevsteal NonIdle = user + nice + system + irq + softirq + steal
-
-  // PrevTotal = PrevIdle + PrevNonIdle
-  // Total = Idle + NonIdle
-
-  // # differentiate: actual value minus the previous one
-  // totald = Total - PrevTotal
-  // idled = Idle - PrevIdle
-
-  // CPU_Percentage = (totald - idled)/totald
 
   return cpu;
 }

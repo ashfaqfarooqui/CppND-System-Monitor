@@ -90,9 +90,10 @@ vector<int> LinuxParser::Pids() {
 // DONE: Read and return the system memory utilization
 float LinuxParser::MemoryUtilization() {
   float memTotal =
-      stof(readInfo(kProcDirectory + kMeminfoFilename, "MemTotal:"));
+      stof(readInfo(kProcDirectory + kMeminfoFilename, filterMemTotalString));
 
-  float memFree = stof(readInfo(kProcDirectory + kMeminfoFilename, "MemFree:"));
+  float memFree =
+      stof(readInfo(kProcDirectory + kMeminfoFilename, filterMemFreeString));
 
   return (memTotal - memFree) / memTotal;
 }
@@ -107,21 +108,6 @@ long LinuxParser::UpTime() {
   }
   return stol(t1.substr(0, t1.find('.')));
 }
-
-// TODO: Read and return the number of jiffies for the system
-long LinuxParser::Jiffies() { return 0; }
-
-// TODO: Read and return the number of active jiffies for a PID
-// REMOVE: [[maybe_unused]] once you define the function
-long LinuxParser::ActiveJiffies(int pid [[maybe_unused]]) { return 0; }
-
-// TODO: Read and return the number of active jiffies for the system
-long LinuxParser::ActiveJiffies() { return 0; }
-
-// TODO: Read and return the number of idle jiffies for the system
-long LinuxParser::IdleJiffies() { return 0; }
-
-// DONE: Read and return CPU utilization
 vector<int> LinuxParser::CpuUtilization() {
   string line, key, value;
   vector<int> vals;
@@ -143,33 +129,20 @@ vector<int> LinuxParser::CpuUtilization() {
     linestream >> cpu >> user >> nice >> system >> idle >> iowait >> irq >>
         softirq >> steal >> guest >> guest_nice;
 
-    size_t pos = 0;
-
-    vals.push_back(user);
-
-    vals.push_back(nice);
-    vals.push_back(system);
-    vals.push_back(idle);
-    vals.push_back(iowait);
-    vals.push_back(irq);
-    vals.push_back(softirq);
-    vals.push_back(steal);
-    vals.push_back(guest);
-    vals.push_back(guest_nice);
+    vals = {user, nice,    system, idle,  iowait,
+            irq,  softirq, steal,  guest, guest_nice};
   }
   return vals;
 }
 
 int LinuxParser::TotalProcesses() {
-  return stoi(readInfo(kProcDirectory + kStatFilename, "processes"));
+  return stoi(readInfo(kProcDirectory + kStatFilename, filterProcesses));
 }
 
 int LinuxParser::RunningProcesses() {
-  return stoi(readInfo(kProcDirectory + kStatFilename, "procs_running"));
+  return stoi(readInfo(kProcDirectory + kStatFilename, filterRunningProcesses));
 }
 
-// DONE: Read and return the command associated with a process
-// REMOVE: [[maybe_unused]] once you define the function
 string LinuxParser::Command(int pid) {
   string line;
   std::ifstream filestream(kProcDirectory + to_string(pid) + kCmdlineFilename);
@@ -181,24 +154,27 @@ string LinuxParser::Command(int pid) {
   return string();
 }
 
-// DONE: Read and return the memory used by a process
-// REMOVE: [[maybe_unused]] once you define the function
+/*
+** Using "VmRss" instead of "VmSize" as suggested by a revewer at Udacity.
+**
+ "Because VmSize is the sum of all the virtual memory as you can see on the
+ manpages also. Search for VmSize and you will get the following line Whereas
+when you use VmRSS then it gives the exact physical memory being used as a part
+of Physical RAM. So it is recommended to replace the string VmSize with VmRSS as
+people who will be looking at your GitHub might not have any idea of Virtual
+memory and so they will think you have done something wrong"*/
 string LinuxParser::Ram(int pid) {
-  string parsedSize =
-      readInfo(kProcDirectory + to_string(pid) + kStatusFilename, "VmSize:");
+  string parsedSize = readInfo(
+      kProcDirectory + to_string(pid) + kStatusFilename, filterProcMem);
   long sizeInKb = stol(parsedSize.substr(0, parsedSize.find(" ")));
-  float sizeInMb = sizeInKb / 1024.0;
+  int sizeInMb = sizeInKb / 1024;
   return to_string(sizeInMb);
 }
 
-// DONE: Read and return the user ID associated with a process
-// REMOVE: [[maybe_unused]] once you define the function
 string LinuxParser::Uid(int pid) {
-  return readInfo(kProcDirectory + to_string(pid) + kStatusFilename, "Uid:");
+  return readInfo(kProcDirectory + to_string(pid) + kStatusFilename, filterUID);
 }
 
-// DONE: Read and return the user associated with a process
-// REMOVE: [[maybe_unused]] once you define the function
 string LinuxParser::User(int pid) {
   string line, uid, x, user;
   std::ifstream filestream(kPasswordPath);
@@ -217,11 +193,8 @@ string LinuxParser::User(int pid) {
   return string();
 }
 
-// TODO: Read and return the uptime of a process
-// REMOVE: [[maybe_unused]] once you define the function
 long LinuxParser::UpTime(int pid) {
   string line, key, value;
-  vector<int> vals;
   std::ifstream filestream(kProcDirectory + to_string(pid) + kStatFilename);
   if (filestream.is_open()) {
     std::getline(filestream, line);
